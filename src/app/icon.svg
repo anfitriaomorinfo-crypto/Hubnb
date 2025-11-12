@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#000000" rx="40"/>
+  
+  <!-- H letter -->
+  <path d="M 50 60 L 50 140 M 50 100 L 90 100 M 90 60 L 90 140" 
+        stroke="#FFFFFF" 
+        stroke-width="12" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+  
+  <!-- B letter (stylized) -->
+  <path d="M 110 60 L 110 140 M 110 60 C 110 60, 145 60, 145 85 C 145 95, 135 100, 125 100 M 110 100 C 110 100, 150 100, 150 120 C 150 140, 110 140, 110 140" 
+        stroke="#FFFFFF" 
+        stroke-width="12" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+</svg>
