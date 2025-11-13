@@ -16,13 +16,14 @@ import {
   Plus,
   X
 } from "lucide-react";
+import { getPlatformColor } from "@/lib/platform-colors";
 
 export default function MessagesPage() {
   const [selectedConversation, setSelectedConversation] = useState<string | null>("1");
   const [messageText, setMessageText] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
 
-  // Mock conversations
+  // Mock conversations com cores por plataforma
   const conversations = [
     {
       id: "1",
@@ -152,69 +153,78 @@ export default function MessagesPage() {
 
               {/* Conversation Items */}
               <div className="flex-1 overflow-y-auto">
-                {conversations.map((conv) => (
-                  <div
-                    key={conv.id}
-                    onClick={() => setSelectedConversation(conv.id)}
-                    className={`p-4 border-b border-gray-200 cursor-pointer transition-colors ${
-                      selectedConversation === conv.id
-                        ? "bg-black text-white"
-                        : conv.isRead
-                        ? "bg-white hover:bg-gray-50"
-                        : "bg-gray-50 hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${
-                        selectedConversation === conv.id
-                          ? "bg-white text-black"
-                          : "bg-black text-white"
-                      }`}>
-                        {conv.avatar}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h3 className={`font-semibold truncate ${
-                            selectedConversation === conv.id ? "text-white" : "text-black"
-                          }`}>
-                            {conv.guestName}
-                          </h3>
-                          <span className={`text-xs flex-shrink-0 ${
-                            selectedConversation === conv.id ? "text-gray-300" : "text-gray-500"
-                          }`}>
-                            {conv.time}
-                          </span>
+                {conversations.map((conv) => {
+                  const platformColors = getPlatformColor(conv.platform);
+                  const isSelected = selectedConversation === conv.id;
+                  
+                  return (
+                    <div
+                      key={conv.id}
+                      onClick={() => setSelectedConversation(conv.id)}
+                      className={`p-4 border-b border-gray-200 cursor-pointer transition-colors ${
+                        isSelected
+                          ? `${platformColors.bg} text-white`
+                          : conv.isRead
+                          ? "bg-white hover:bg-gray-50"
+                          : "bg-gray-50 hover:bg-gray-100"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div 
+                          className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${
+                            isSelected
+                              ? "bg-white text-black"
+                              : `${platformColors.bg} text-white`
+                          }`}
+                        >
+                          {conv.avatar}
                         </div>
                         
-                        <p className={`text-sm mb-2 truncate ${
-                          selectedConversation === conv.id ? "text-gray-300" : "text-gray-600"
-                        }`}>
-                          {conv.propertyName}
-                        </p>
-                        
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={`text-sm truncate ${
-                            selectedConversation === conv.id 
-                              ? "text-gray-200" 
-                              : conv.isRead 
-                              ? "text-gray-500" 
-                              : "text-black font-medium"
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h3 className={`font-semibold truncate ${
+                              isSelected ? "text-white" : "text-black"
+                            }`}>
+                              {conv.guestName}
+                            </h3>
+                            <span className={`text-xs flex-shrink-0 ${
+                              isSelected ? "text-white/80" : "text-gray-500"
+                            }`}>
+                              {conv.time}
+                            </span>
+                          </div>
+                          
+                          <p className={`text-sm mb-2 truncate ${
+                            isSelected ? "text-white/90" : "text-gray-600"
                           }`}>
-                            {conv.lastMessage}
+                            {conv.propertyName}
                           </p>
-                          <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${
-                            selectedConversation === conv.id
-                              ? "bg-white/20 text-white"
-                              : "bg-gray-200 text-gray-700"
-                          }`}>
-                            {conv.platform}
-                          </span>
+                          
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={`text-sm truncate ${
+                              isSelected 
+                                ? "text-white/80" 
+                                : conv.isRead 
+                                ? "text-gray-500" 
+                                : "text-black font-medium"
+                            }`}>
+                              {conv.lastMessage}
+                            </p>
+                            <span 
+                              className={`text-xs px-2 py-0.5 rounded flex-shrink-0 font-medium ${
+                                isSelected
+                                  ? "bg-white/20 text-white"
+                                  : `${platformColors.bgLight} ${platformColors.text}`
+                              }`}
+                            >
+                              {conv.platform}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -230,7 +240,11 @@ export default function MessagesPage() {
                           <h2 className="text-xl font-bold text-black">{selectedConv.guestName}</h2>
                           <p className="text-sm text-gray-600">{selectedConv.propertyName}</p>
                         </div>
-                        <span className="px-3 py-1 bg-black text-white rounded-lg text-sm">
+                        <span 
+                          className={`px-3 py-1 rounded-lg text-sm font-medium text-white ${
+                            getPlatformColor(selectedConv.platform).bg
+                          }`}
+                        >
                           {selectedConv.platform}
                         </span>
                       </div>
@@ -238,27 +252,31 @@ export default function MessagesPage() {
 
                     {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                      {messageHistory.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`flex ${msg.sender === "host" ? "justify-end" : "justify-start"}`}
-                        >
+                      {messageHistory.map((msg) => {
+                        const platformColors = getPlatformColor(selectedConv.platform);
+                        
+                        return (
                           <div
-                            className={`max-w-[70%] rounded-lg p-3 ${
-                              msg.sender === "host"
-                                ? "bg-black text-white"
-                                : "bg-gray-100 text-black"
-                            }`}
+                            key={msg.id}
+                            className={`flex ${msg.sender === "host" ? "justify-end" : "justify-start"}`}
                           >
-                            <p className="text-sm">{msg.text}</p>
-                            <span className={`text-xs mt-1 block ${
-                              msg.sender === "host" ? "text-gray-300" : "text-gray-500"
-                            }`}>
-                              {msg.time}
-                            </span>
+                            <div
+                              className={`max-w-[70%] rounded-lg p-3 ${
+                                msg.sender === "host"
+                                  ? `${platformColors.bg} text-white`
+                                  : "bg-gray-100 text-black"
+                              }`}
+                            >
+                              <p className="text-sm">{msg.text}</p>
+                              <span className={`text-xs mt-1 block ${
+                                msg.sender === "host" ? "text-white/70" : "text-gray-500"
+                              }`}>
+                                {msg.time}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Message Input */}
@@ -271,7 +289,7 @@ export default function MessagesPage() {
                           className="flex-1 min-h-[60px] max-h-[120px] resize-none border-gray-300 focus:border-black"
                         />
                         <Button
-                          className="bg-black text-white hover:bg-gray-900 self-end"
+                          className={`self-end text-white ${getPlatformColor(selectedConv.platform).bg}`}
                           size="icon"
                         >
                           <Send className="w-5 h-5" />

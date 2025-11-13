@@ -11,22 +11,9 @@ export interface SignInData {
   password: string;
 }
 
-// Verificar se Supabase está configurado
-const isSupabaseConfigured = () => {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL && 
-         process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co';
-};
-
 // Criar conta
 export async function signUp({ email, password, name }: SignUpData) {
   try {
-    if (!isSupabaseConfigured()) {
-      return { 
-        data: null, 
-        error: 'Supabase não configurado. Conecte sua conta Supabase nas configurações do projeto.' 
-      };
-    }
-
     // 1. Criar usuário no Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -40,8 +27,8 @@ export async function signUp({ email, password, name }: SignUpData) {
 
     if (authError) throw authError;
 
-    // 2. Criar perfil na tabela users
-    if (authData.user) {
+    // 2. Criar perfil na tabela users (se confirmação automática estiver ativada)
+    if (authData.user && authData.user.confirmed_at) {
       const { error: profileError } = await supabase
         .from('users')
         .insert([
@@ -52,7 +39,9 @@ export async function signUp({ email, password, name }: SignUpData) {
           },
         ]);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Erro ao criar perfil:', profileError);
+      }
     }
 
     return { data: authData, error: null };
@@ -64,13 +53,6 @@ export async function signUp({ email, password, name }: SignUpData) {
 // Login
 export async function signIn({ email, password }: SignInData) {
   try {
-    if (!isSupabaseConfigured()) {
-      return { 
-        data: null, 
-        error: 'Supabase não configurado. Conecte sua conta Supabase nas configurações do projeto.' 
-      };
-    }
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -87,10 +69,6 @@ export async function signIn({ email, password }: SignInData) {
 // Logout
 export async function signOut() {
   try {
-    if (!isSupabaseConfigured()) {
-      return { error: 'Supabase não configurado' };
-    }
-
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     return { error: null };
@@ -102,10 +80,6 @@ export async function signOut() {
 // Verificar sessão atual
 export async function getCurrentUser() {
   try {
-    if (!isSupabaseConfigured()) {
-      return { user: null, error: null };
-    }
-
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) throw error;
@@ -118,7 +92,27 @@ export async function getCurrentUser() {
         .eq('id', user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        // Se perfil não existe, criar um (útil para login social)
+        const { data: newProfile, error: createError } = await supabase
+          .from('users')
+          .insert([
+            {
+              id: user.id,
+              email: user.email!,
+              name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
+            },
+          ])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Erro ao criar perfil:', createError);
+          return { user: null, error: createError.message };
+        }
+
+        return { user: newProfile, error: null };
+      }
 
       return { user: profile, error: null };
     }
@@ -132,17 +126,14 @@ export async function getCurrentUser() {
 // Login com Google
 export async function signInWithGoogle() {
   try {
-    if (!isSupabaseConfigured()) {
-      return { 
-        data: null, 
-        error: 'Supabase não configurado. Conecte sua conta Supabase nas configurações do projeto.' 
-      };
-    }
-
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     });
 
@@ -157,10 +148,6 @@ export async function signInWithGoogle() {
 // Resetar senha
 export async function resetPassword(email: string) {
   try {
-    if (!isSupabaseConfigured()) {
-      return { error: 'Supabase não configurado' };
-    }
-
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });

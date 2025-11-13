@@ -12,7 +12,8 @@ import {
   Edit,
   Trash2,
   ExternalLink,
-  TrendingUp
+  TrendingUp,
+  ArrowRightLeft
 } from "lucide-react";
 
 export default function PropertiesPage() {
@@ -194,7 +195,17 @@ export default function PropertiesPage() {
 
                   {/* Platforms */}
                   <div className="mb-4">
-                    <p className="text-xs text-gray-600 mb-2">Plataformas Conectadas</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs text-gray-600">Plataformas Conectadas</p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-auto py-1 px-2 text-xs text-black hover:bg-black hover:text-white"
+                      >
+                        <ArrowRightLeft className="w-3 h-3 mr-1" />
+                        Migrar
+                      </Button>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {property.platforms.map((platform) => (
                         <span

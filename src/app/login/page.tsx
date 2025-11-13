@@ -1,22 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
+import { Mail, Lock, ArrowLeft, Loader2, User, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { signUp, signIn, signInWithGoogle } from "@/lib/auth";
 import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Mostrar mensagens de erro da URL
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      switch (error) {
+        case 'auth_failed':
+          toast.error('Falha na autenticação. Tente novamente.');
+          break;
+        case 'callback_failed':
+          toast.error('Erro no processo de login. Tente novamente.');
+          break;
+        case 'no_code':
+          toast.error('Código de autenticação não encontrado.');
+          break;
+      }
+    }
+
+    const success = searchParams.get('login');
+    if (success === 'success') {
+      toast.success('Login realizado com sucesso!');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +60,11 @@ export default function LoginPage() {
         router.push("/dashboard");
       } else {
         // Criar conta
+        if (!name.trim()) {
+          toast.error("Por favor, informe seu nome");
+          return;
+        }
+
         const { data, error } = await signUp({ email, password, name });
         
         if (error) {
@@ -43,8 +72,13 @@ export default function LoginPage() {
           return;
         }
 
-        toast.success("Conta criada com sucesso! Verifique seu e-mail.");
-        setIsLogin(true);
+        // Verificar se precisa confirmar email
+        if (data?.user && !data.user.confirmed_at) {
+          toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+        } else {
+          toast.success("Conta criada com sucesso!");
+          router.push("/dashboard");
+        }
       }
     } catch (error: any) {
       toast.error("Erro ao processar solicitação");
@@ -60,10 +94,11 @@ export default function LoginPage() {
       
       if (error) {
         toast.error(error);
+        setLoading(false);
       }
+      // Não desabilita loading aqui pois vai redirecionar para Google
     } catch (error: any) {
       toast.error("Erro ao fazer login com Google");
-    } finally {
       setLoading(false);
     }
   };
@@ -102,6 +137,51 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Social Login First */}
+          <div className="space-y-3 mb-8">
+            <Button 
+              type="button"
+              variant="outline" 
+              className="w-full h-12 border-gray-300 hover:bg-gray-50 transition-all duration-200"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+              )}
+              {isLogin ? "Entrar com Google" : "Criar conta com Google"}
+            </Button>
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500">ou continue com e-mail</span>
+            </div>
+          </div>
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
@@ -109,16 +189,19 @@ export default function LoginPage() {
                 <Label htmlFor="name" className="text-black font-medium">
                   Nome completo
                 </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="João Silva"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-12 border-gray-300 focus:border-black"
-                  required
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="João Silva"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-12 pl-10 border-gray-300 focus:border-black transition-colors"
+                    required
+                    disabled={loading}
+                  />
+                </div>
               </div>
             )}
 
@@ -134,7 +217,7 @@ export default function LoginPage() {
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 pl-10 border-gray-300 focus:border-black"
+                  className="h-12 pl-10 border-gray-300 focus:border-black transition-colors"
                   required
                   disabled={loading}
                 />
@@ -153,7 +236,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 pl-10 border-gray-300 focus:border-black"
+                  className="h-12 pl-10 border-gray-300 focus:border-black transition-colors"
                   required
                   disabled={loading}
                   minLength={6}
@@ -181,7 +264,7 @@ export default function LoginPage() {
 
             <Button 
               type="submit" 
-              className="w-full h-12 bg-black text-white hover:bg-gray-900 text-base font-medium"
+              className="w-full h-12 bg-black text-white hover:bg-gray-900 text-base font-medium transition-all duration-200"
               disabled={loading}
             >
               {loading ? (
@@ -194,59 +277,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">ou continue com</span>
-            </div>
-          </div>
-
-          {/* Social Login */}
-          <div className="space-y-3">
-            <Button 
-              type="button"
-              variant="outline" 
-              className="w-full h-12 border-gray-300 hover:bg-gray-50"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Google
-            </Button>
-
-            <Button 
-              type="button"
-              variant="outline" 
-              className="w-full h-12 border-gray-300 hover:bg-gray-50"
-              disabled
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm6.066 9.645c.183 4.04-2.83 8.544-8.164 8.544-1.622 0-3.131-.476-4.402-1.291 1.524.18 3.045-.244 4.252-1.189-1.256-.023-2.317-.854-2.684-1.995.451.086.895.061 1.298-.049-1.381-.278-2.335-1.522-2.304-2.853.388.215.83.344 1.301.359-1.279-.855-1.641-2.544-.889-3.835 1.416 1.738 3.533 2.881 5.92 3.001-.419-1.796.944-3.527 2.799-3.527.825 0 1.572.349 2.096.907.654-.128 1.27-.368 1.824-.697-.215.671-.67 1.233-1.263 1.589.581-.07 1.135-.224 1.649-.453-.384.578-.87 1.084-1.433 1.489z"/>
-              </svg>
-              Airbnb (em breve)
-            </Button>
-          </div>
 
           {/* Toggle Login/Signup */}
           <div className="mt-8 text-center">
